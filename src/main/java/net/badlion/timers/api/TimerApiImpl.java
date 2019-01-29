@@ -9,6 +9,7 @@ import org.bukkit.inventory.ItemStack;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class TimerApiImpl extends TimerApi {
@@ -26,13 +27,27 @@ public class TimerApiImpl extends TimerApi {
 	}
 
 	@Override
-	public Timer createTimer(ItemStack item, boolean repeating, long time) {
-		return this.createTimer(null, item, repeating, time);
+	public Timer createTickTimer(ItemStack item, boolean repeating, long time) {
+		return this.createTickTimer(null, item, repeating, time);
 	}
 
 	@Override
-	public Timer createTimer(String name, ItemStack item, boolean repeating, long time) {
+	public Timer createTickTimer(String name, ItemStack item, boolean repeating, long time) {
 		TimerImpl timer = new TimerImpl(this.plugin, this.idGenerator.getAndIncrement(), name, item, repeating, time);
+
+		this.allTimers.add(timer);
+
+		return timer;
+	}
+
+	@Override
+	public Timer createTimeTimer(ItemStack item, boolean repeating, long time, TimeUnit timeUnit) {
+		return this.createTimeTimer(null, item, repeating, time, timeUnit);
+	}
+
+	@Override
+	public Timer createTimeTimer(String name, ItemStack item, boolean repeating, long time, TimeUnit timeUnit) {
+		TimerImpl timer = new TimerImpl(this.plugin, this.idGenerator.getAndIncrement(), name, item, repeating, time, timeUnit);
 
 		this.allTimers.add(timer);
 

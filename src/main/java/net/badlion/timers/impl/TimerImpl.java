@@ -18,6 +18,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class TimerImpl implements Timer {
@@ -35,9 +36,11 @@ public class TimerImpl implements Timer {
 	private ItemStack item;
 	private boolean repeating;
 	private long time;
+	private long millis;
 	private AtomicBoolean updated;
 	private Set<Player> receivers;
 	private long currentTime;
+	private long lastTick;
 
 	public TimerImpl(TimerPlugin plugin, long id, String name, ItemStack item, boolean repeating, long time) {
 		this.plugin = plugin;
@@ -46,7 +49,27 @@ public class TimerImpl implements Timer {
 		this.item = item;
 		this.repeating = repeating;
 		this.time = time;
+		this.millis = -1;
 		this.currentTime = time;
+		this.lastTick = System.currentTimeMillis();
+
+		this.updated = new AtomicBoolean(false);
+		this.receivers = Collections.newSetFromMap(new ConcurrentHashMap<Player, Boolean>());
+
+		this.removeReceiverRequest = new RemoveReceiverRequest();
+		this.removeReceiverRequest.id = id;
+	}
+
+	public TimerImpl(TimerPlugin plugin, int id, String name, ItemStack item, boolean repeating, long time, TimeUnit timeUnit) {
+		this.plugin = plugin;
+		this.id = id;
+		this.name = name;
+		this.item = item;
+		this.repeating = repeating;
+		this.time = -1;
+		this.millis = timeUnit.toMillis(time);
+		this.currentTime = this.millis;
+		this.lastTick = System.currentTimeMillis();
 
 		this.updated = new AtomicBoolean(false);
 		this.receivers = Collections.newSetFromMap(new ConcurrentHashMap<Player, Boolean>());
@@ -116,6 +139,21 @@ public class TimerImpl implements Timer {
 	@Override
 	public void setTime(long time) {
 		this.time = time;
+		this.millis = -1L;
+		this.updated.set(true);
+		this.reset();
+	}
+
+	@Override
+	public long getMillis() {
+		return this.millis;
+	}
+
+	@Override
+	public void setTime(long time, TimeUnit timeUnit) {
+		this.time = -1L;
+		this.millis = timeUnit.toMillis(time);
+		this.updated.set(true);
 		this.reset();
 	}
 
@@ -147,20 +185,38 @@ public class TimerImpl implements Timer {
 
 	@Override
 	public void reset() {
-		this.currentTime = this.time;
+		this.currentTime = this.time != -1L ? this.time : this.millis;
 
 		this.syncTimer();
 	}
 
 	public void tick() {
-		if (--this.currentTime <= 0) {
-			if (!this.repeating) {
-				this.plugin.getTimerApi().removeTimer(this);
-				return;
-			} else {
-				this.currentTime = this.time;
+
+		long currentMillis = System.currentTimeMillis();
+
+		if (this.time != -1L) {
+			if (--this.currentTime <= 0) {
+				if (!this.repeating) {
+					this.plugin.getTimerApi().removeTimer(this);
+					return;
+				} else {
+					this.currentTime = this.time;
+				}
+			}
+		} else {
+			long diff = currentMillis - this.lastTick;
+
+			if ((this.currentTime -= diff) <= 0) {
+				if (!this.repeating) {
+					this.plugin.getTimerApi().removeTimer(this);
+					return;
+				} else {
+					this.currentTime += this.millis;
+				}
 			}
 		}
+
+		this.lastTick = currentMillis;
 
 		if (this.updated.compareAndSet(true, false)) {
 			this.send(this.receivers, "UPDATE_TIMER", this);
@@ -197,6 +253,7 @@ public class TimerImpl implements Timer {
 			jsonObject.add("item", TimerImpl.GSON.toJsonTree(timer.item.serialize()));
 			jsonObject.add("repeating", new JsonPrimitive(timer.repeating));
 			jsonObject.add("time", new JsonPrimitive(timer.time));
+			jsonObject.add("millis", new JsonPrimitive(timer.millis));
 			jsonObject.add("currentTime", new JsonPrimitive(timer.currentTime));
 
 			return jsonObject;

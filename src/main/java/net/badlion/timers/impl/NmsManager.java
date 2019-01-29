@@ -140,7 +140,7 @@ public class NmsManager {
 			Object playerConnection = NmsManager.playerConnectionField.get(nmsPlayer);
 			NmsManager.sendPacketMethod.invoke(playerConnection, packet);
 		} catch (Exception ex) {
-			NmsManager.plugin.getLogger().severe("Failed to send BLC CPS packet");
+			NmsManager.plugin.getLogger().severe("Failed to send BLC Timer packet");
 			ex.printStackTrace();
 		}
 	}

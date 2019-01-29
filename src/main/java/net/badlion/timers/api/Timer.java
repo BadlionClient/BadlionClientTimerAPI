@@ -4,6 +4,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.Collection;
+import java.util.concurrent.TimeUnit;
 
 public interface Timer {
 
@@ -77,6 +78,22 @@ public interface Timer {
 	 * @param time Timer countdown time as a long number of ticks
 	 */
 	void setTime(long time);
+
+	/**
+	 * Get the timer countdown time
+	 *
+	 * @return Timer countdown time in milliseconds
+	 */
+	long getMillis();
+
+	/**
+	 * Set the timer countdown time
+	 * Note : This implies a call to {@link Timer#reset()}
+	 *
+	 * @param time     Timer countdown time
+	 * @param timeUnit Timer countdown time unit
+	 */
+	void setTime(long time, TimeUnit timeUnit);
 
 	// Player functions
 
