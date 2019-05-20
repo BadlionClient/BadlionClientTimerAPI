@@ -25,6 +25,10 @@ public class NmsManager {
 	private static Class<?> packetDataSerializerClass;
 	private static Constructor<?> packetDataSerializerConstructor;
 
+	// Bukkit 1.13+ support
+	private static Class<?> minecraftKeyClass;
+	private static Constructor<?> minecraftKeyConstructor;
+
 	private static Method wrappedBufferMethod;
 
 	public static void init(TimerPlugin plugin) {
@@ -100,7 +104,22 @@ public class NmsManager {
 			// If we made it this far in theory we are on at least 1.8
 			NmsManager.packetPlayOutCustomPayloadConstructor = NmsManager.getConstructor(packetPlayOutCustomPayloadClass, String.class, NmsManager.packetDataSerializerClass);
 			if (NmsManager.packetPlayOutCustomPayloadConstructor == null) {
-				throw new RuntimeException("Failed to find PacketPlayOutCustomPayload constructor 2x");
+				// Ok we are in 1.13 or higher now...
+				NmsManager.minecraftKeyClass = NmsManager.getClass("net.minecraft.server." + NmsManager.versionSuffix + ".MinecraftKey");
+				if (NmsManager.minecraftKeyClass == null) {
+					throw new RuntimeException("Failed to find PacketPlayOutCustomPayload constructor or MinecraftKey class");
+				}
+
+				NmsManager.minecraftKeyConstructor = NmsManager.getConstructor(NmsManager.minecraftKeyClass, String.class, String.class);
+				if (NmsManager.minecraftKeyConstructor == null) {
+					throw new RuntimeException("Failed to find PacketPlayOutCustomPayload constructor or MinecraftKey constructor");
+				}
+
+				// If we still can't find this...unknown version
+				NmsManager.packetPlayOutCustomPayloadConstructor = NmsManager.getConstructor(packetPlayOutCustomPayloadClass, NmsManager.minecraftKeyClass, NmsManager.packetDataSerializerClass);
+				if (NmsManager.packetPlayOutCustomPayloadConstructor == null) {
+					throw new RuntimeException("Failed to find PacketPlayOutCustomPayload constructor");
+				}
 			}
 		}
 
@@ -124,13 +143,19 @@ public class NmsManager {
 		try {
 			Object packet;
 
-			// Newer MC version, setup ByteBuf object
-			if (NmsManager.packetDataSerializerClass != null) {
+			// 1.13+
+			if (NmsManager.minecraftKeyClass != null) {
+				Object minecraftKey = NmsManager.minecraftKeyConstructor.newInstance("badlion", "timers");
+				Object byteBuf = NmsManager.wrappedBufferMethod.invoke(null, (Object) message);
+				Object packetDataSerializer = NmsManager.packetDataSerializerConstructor.newInstance(byteBuf);
+
+				packet = NmsManager.packetPlayOutCustomPayloadConstructor.newInstance(minecraftKey, packetDataSerializer);
+			} else if (NmsManager.packetDataSerializerClass != null) { // 1.8+
 				Object byteBuf = NmsManager.wrappedBufferMethod.invoke(null, (Object) message);
 				Object packetDataSerializer = NmsManager.packetDataSerializerConstructor.newInstance(byteBuf);
 
 				packet = NmsManager.packetPlayOutCustomPayloadConstructor.newInstance(channel, packetDataSerializer);
-			} else {
+			} else { // 1.7
 				// Work our magic to make the packet
 				packet = NmsManager.packetPlayOutCustomPayloadConstructor.newInstance(channel, message);
 			}

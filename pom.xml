@@ -6,7 +6,7 @@
 
     <groupId>net.badlion</groupId>
     <artifactId>timer-api</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.1</version>
 
     <packaging>jar</packaging>
 
@@ -27,6 +27,20 @@
     </dependencies>
 
     <build>
+        <defaultGoal>clean install</defaultGoal>
+        <finalName>badlionclienttimerapi</finalName>
+        <sourceDirectory>src/main/java</sourceDirectory>
+        <resources>
+            <resource>
+                <targetPath>.</targetPath>
+                <filtering>true</filtering>
+                <directory>src/main/resources/</directory>
+                <includes>
+                    <include>*.yml</include>
+                </includes>
+            </resource>
+        </resources>
+
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
