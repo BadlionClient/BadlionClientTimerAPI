@@ -7,6 +7,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.PlayerRespawnEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 
 public class TimerListener implements Listener {
@@ -17,7 +18,7 @@ public class TimerListener implements Listener {
 		this.plugin = plugin;
 	}
 
-	@EventHandler
+	@EventHandler(priority = EventPriority.LOWEST)
 	public void onJoin(PlayerJoinEvent event) {
 		NmsManager.sendPluginMessage(event.getPlayer(), TimerPlugin.CHANNEL_NAME, "REGISTER|{}".getBytes(TimerPlugin.UTF_8_CHARSET));
 		NmsManager.sendPluginMessage(event.getPlayer(), TimerPlugin.CHANNEL_NAME, "CHANGE_WORLD|{}".getBytes(TimerPlugin.UTF_8_CHARSET));
@@ -33,5 +34,10 @@ public class TimerListener implements Listener {
 		if (!event.getFrom().getWorld().equals(event.getTo().getWorld())) {
 			NmsManager.sendPluginMessage(event.getPlayer(), TimerPlugin.CHANNEL_NAME, "CHANGE_WORLD|{}".getBytes(TimerPlugin.UTF_8_CHARSET));
 		}
+	}
+
+	@EventHandler(ignoreCancelled = true, priority = EventPriority.MONITOR)
+	public void onRespawn(PlayerRespawnEvent event) {
+		NmsManager.sendPluginMessage(event.getPlayer(), TimerPlugin.CHANNEL_NAME, "CHANGE_WORLD|{}".getBytes(TimerPlugin.UTF_8_CHARSET));
 	}
 }
